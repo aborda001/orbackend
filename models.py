@@ -6,8 +6,6 @@ import mediapipe as mp
 
 
 def mediaPipeModel(video_path):
-    print(dir(mp))
-    # Inicializa MediaPipe Pose
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
 
@@ -21,25 +19,48 @@ def mediaPipeModel(video_path):
     video_path = video_path.split('/')[-1].split('.')[0]
     new_video = f'{timestamp}{video_path}.avi'
     video_writer = cv.VideoWriter(new_video, fourcc, fps, (frame_width, frame_height))
-    valid = True if video_path.endswith('1.mp4') else False
+    body_points = []
 
 
-    # Inicializa el modelo de detección de poses
     with mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
 
-            # Convierte el fotograma de BGR a RGB
             frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
-            # Procesa el fotograma para la detección de poses
             results = pose.process(frame_rgb)
 
-            # Verifica si se detectó alguna pose
             if results.pose_landmarks:
-                # Dibuja los puntos de referencia de la pose en el fotograma
+                RWrist = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
+                RElbow = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_ELBOW]
+                RShoulder = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+                LShoulder = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+                LElbow = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW]
+                LWrist = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST]
+                RHip = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
+                RKnee = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE]
+                RAnkle = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_ANKLE]
+                LHip = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
+                LKnee = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
+                LAnkle = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ANKLE]
+
+                body_points.append({
+                    "RWrist": [RWrist.x, RWrist.y],
+                    "RElbow": [RElbow.x, RElbow.y],
+                    "RShoulder": [RShoulder.x, RShoulder.y],
+                    "LShoulder": [LShoulder.x, LShoulder.y],
+                    "LElbow": [LElbow.x, LElbow.y],
+                    "LWrist": [LWrist.x, LWrist.y],
+                    "RHip": [RHip.x, RHip.y],
+                    "RKnee": [RKnee.x, RKnee.y],
+                    "RAnkle": [RAnkle.x, RAnkle.y],
+                    "LHip": [LHip.x, LHip.y],
+                    "LKnee": [LKnee.x, LKnee.y],
+                    "LAnkle": [LAnkle.x, LAnkle.y]
+                })
+
                 mp_drawing.draw_landmarks(
                     frame,
                     results.pose_landmarks,
@@ -48,12 +69,9 @@ def mediaPipeModel(video_path):
                     mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2),
                 )
 
-            # Muestra el fotograma con las poses detectadas
-
             video_writer.write(frame)
-            cv.imshow('Pose Detection', frame)
+            # cv.imshow('Pose Detection', frame)
 
-            # Sale del bucle si se presiona la tecla 'q'
             if cv.waitKey(10) & 0xFF == ord('q'):
                 break
 
@@ -67,7 +85,7 @@ def mediaPipeModel(video_path):
 
     return {
         "video": new_video,
-        "is_valid": valid
+        "body_points":body_points
     }
 
 def openPoseModel(video):
@@ -92,7 +110,6 @@ def openPoseModel(video):
 
     threshold = 0.1
     cap = cv.VideoCapture(video)
-    valid = True if video.endswith('1.mp4') else False
     video = video.split('/')[-1].split('.')[0]
     fps = cap.get(cv.CAP_PROP_FPS)
     frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
@@ -101,6 +118,7 @@ def openPoseModel(video):
     fourcc = cv.VideoWriter_fourcc(*'XVID')
     new_video = f'{timestamp}{video}.avi'
     video_writer = cv.VideoWriter(new_video, fourcc, fps, (frame_width, frame_height))
+    body_points = []
 
     while cap.isOpened():
         ret, img = cap.read()
@@ -135,9 +153,38 @@ def openPoseModel(video):
                 cv.line(img, points[idFrom], points[idTo], (0, 255, 0), 3)
                 cv.ellipse(img, points[idFrom], (3, 3), 0, 0, 360, (0, 0, 255), cv.FILLED)
                 cv.ellipse(img, points[idTo], (3, 3), 0, 0, 360, (0, 0, 255), cv.FILLED)
+        
 
+        RWrist = points[4]
+        RElbow = points[3]
+        RShoulder = points[2]
+        LShoulder = points[5]
+        LElbow = points[6]
+        LWrist = points[7]
+        RHip = points[8]
+        RKnee = points[9]
+        RAnkle = points[10]
+        LHip = points[11]
+        LKnee = points[12]
+        LAnkle = points[13]
+
+        body_points.append({
+            "RWrist": RWrist,
+            "RElbow": RElbow,
+            "RShoulder": RShoulder,
+            "LShoulder": LShoulder,
+            "LElbow": LElbow,
+            "LWrist": LWrist,
+            "RHip": RHip,
+            "RKnee": RKnee,
+            "RAnkle": RAnkle,
+            "LHip": LHip,
+            "LKnee": LKnee,
+            "LAnkle": LAnkle
+        })
+      
         video_writer.write(img)
-        cv.imshow("OpenPose Output", img)
+        # cv.imshow("OpenPose Output", img)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
@@ -152,15 +199,23 @@ def openPoseModel(video):
 
     return {
         "video": new_video,
-        "is_valid": valid
+        "body_points": body_points
     }
 
 
 if __name__ == '__main__':
+    from utils import validatePoses
     video = 'ts2_2_2.mp4'
 
     if (input("Model: ") == '0'):
         result = mediaPipeModel(video)
     else:
         result = openPoseModel(video)
-    print(result)
+    
+    isValid = validatePoses(result['body_points'], "ts2")
+
+    print({
+            'message': 'File uploaded successfully',
+            'newVideo': result['video'],
+            'isVideoValid': isValid,
+        })

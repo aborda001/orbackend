@@ -1,7 +1,9 @@
+import os
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import os
 from models import openPoseModel, mediaPipeModel
+from utils import validatePoses
+
 
 app = Flask(__name__)
 CORS(app)
@@ -28,6 +30,7 @@ def upload():
         return jsonify({'error': 'No selected file'}), 400
 
     file = request.files['video']
+    exercise = request.form['exercise']
 
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
@@ -42,10 +45,11 @@ def upload():
             result = openPoseModel(filepath)
 
 
+        isValid = validatePoses(result['body_points'], exercise)
         return jsonify( {
             'message': 'File uploaded successfully',
             'newVideo': result['video'],
-            'isVideoValid': result['is_valid']
+            'isVideoValid': isValid,
         }), 200
 
 
