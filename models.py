@@ -205,14 +205,14 @@ def openPoseModel(video):
 
 if __name__ == '__main__':
     from utils import validatePoses
-    video = 'ts2_2_2.mp4'
+    video = 'ts3_1_1.mp4'
 
     if (input("Model: ") == '0'):
         result = mediaPipeModel(video)
     else:
         result = openPoseModel(video)
     
-    isValid = validatePoses(result['body_points'], "ts2")
+    isValid = validatePoses(result['body_points'], "ts3")
 
     print({
             'message': 'File uploaded successfully',

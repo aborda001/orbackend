@@ -9,6 +9,8 @@ def validatePoses(bodyPoints, exercise):
         return calculateAnglePushUps(bodyPoints)
     elif (exercise == "ts2"):
         return calculateAnglesPullUps(bodyPoints)
+    elif (exercise == "ts3"):
+        return calculateAngleShoulderPress(bodyPoints)
 
 def plot_regression(angles, output_path='regression_plot.png'):
     """
@@ -123,4 +125,32 @@ def calculateAnglesPullUps(bodyPoints):
         return False
         
     return True
+
+def calculateAngleShoulderPress(bodyPoints):
+    angles = []
+    for points in bodyPoints:
+        RShoulder = points["RShoulder"]
+        RElbow = points["RElbow"]
+        RWrist = points["RWrist"]
+        LShoulder = points["LShoulder"]
+        LElbow = points["LElbow"]
+        LWrist = points["LWrist"]
+
+        angleRight = calculateAngle(RShoulder, RElbow, RWrist)
+        angleLeft = calculateAngle(LShoulder, LElbow, LWrist)
+
+        angles.append(angleRight)
+        angles.append(angleLeft)
+
+    plot_regression(angles, 'correcto.png')
+
+    sumAngles = sum(angles) 
+    average = sumAngles / len(angles)
+
+    print("Average: ", average)
+
+    if (average > 90 and average < 100):
+        return True
+        
+    return False
 
