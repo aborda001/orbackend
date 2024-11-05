@@ -1,20 +1,21 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 import os
-from openpose import openPose
+from models import openPoseModel, mediaPipeModel
 
 app = Flask(__name__)
 CORS(app)
 
 UPLOAD_FOLDER = ''
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# if not os.path.exists(UPLOAD_FOLDER):
-#     os.makedirs(UPLOAD_FOLDER)
+app.config['model'] = '0'
 
 @app.route('/')
-def hello_world():
-    return 'Hello, World!'
+def index():
+    model = request.args.get('model', default='0', type=str)
+    app.config['model'] = model
+    return "Hello, World!"
+
 
 @app.route('/video/<filename>')
 def video(filename):
@@ -35,7 +36,11 @@ def upload():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filepath)
 
-        result = openPose(filepath)
+        if (app.config['model'] == '0'):
+            result = mediaPipeModel(filepath)
+        else:
+            result = openPoseModel(filepath)
+
 
         return jsonify( {
             'message': 'File uploaded successfully',
