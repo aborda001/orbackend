@@ -11,6 +11,8 @@ def validatePoses(bodyPoints, exercise):
         return calculateAnglesPullUps(bodyPoints)
     elif (exercise == "ts3"):
         return calculateAngleShoulderPress(bodyPoints)
+    else:
+        return calculateAnglePushUps(bodyPoints)
 
 def plot_regression(angles, output_path='regression_plot.png'):
     """
