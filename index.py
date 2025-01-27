@@ -47,9 +47,9 @@ def upload():
 
         isValid = validatePoses(result['body_points'], exercise)
         return jsonify( {
-            'message': 'File uploaded successfully',
             'newVideo': result['video'],
-            'isVideoValid': isValid,
+            'isVideoValid': isValid.get('is_Valid'),
+            'message': isValid.get('message')
         }), 200
 
 

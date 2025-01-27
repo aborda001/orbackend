@@ -6,13 +6,13 @@ import numpy as np
 
 def validatePoses(bodyPoints, exercise):
     if (exercise == "ts1"):
-        return calculateAnglePushUps(bodyPoints)
+        return validatePushUps(bodyPoints)
     elif (exercise == "ts2"):
-        return calculateAnglesPullUps(bodyPoints)
+        return validatePullUps(bodyPoints)
     elif (exercise == "ts3"):
-        return calculateAngleShoulderPress(bodyPoints)
-    else:
-        return calculateAnglePushUps(bodyPoints)
+        return validateShoulderPress(bodyPoints)
+    elif exercise == "ts4":
+        return validateRowing(bodyPoints)
 
 def plot_regression(angles, output_path='regression_plot.png'):
     """
@@ -50,109 +50,148 @@ def plot_regression(angles, output_path='regression_plot.png'):
     print(f'Gráfico guardado en: {output_path}')
 
 def calculateAngle(a, b, c):
-    """Calcula el ángulo entre tres puntos a, b y c."""
-    radians = math.atan2(c[1] - b[1], c[0] - b[0]) - math.atan2(a[1] - b[1], a[0] - b[0])
-    angle = abs(radians * 180.0 / math.pi)
-    if angle > 180.0:
-        angle = 360 - angle
-    return angle
+    """
+    Calcula el ángulo entre tres puntos: a (inicio), b (vértice), c (fin).
+    """
+    ang = math.degrees(math.atan2(c[1] - b[1], c[0] - b[0]) - math.atan2(a[1] - b[1], a[0] - b[0]))
+    return abs(ang if ang >= 0 else ang + 360)
 
+def validatePushUps(bodyPoints):
+    """
+    Calcula las repeticiones de flexiones (push-ups) basándose en los puntos del cuerpo.
+    
+    Args:
+        bodyPoints (list): Lista de puntos clave del cuerpo en cada fotograma,
+                           donde cada entrada es un diccionario con las posiciones
+                           de las articulaciones en coordenadas normalizadas.
 
-def calculateAnglePushUps(bodyPoints):
-    anglesRight = []
-    anglesLeft = []
+    Returns:
+        int: Número total de repeticiones completadas correctamente.
+    """
+    repetitions = 0
+    is_down = False
+
     for points in bodyPoints:
+        if all(k in points for k in ["RShoulder", "RElbow", "RWrist", "RHip", "RKnee"]):
+            RShoulder = points["RShoulder"]
+            RElbow = points["RElbow"]
+            RWrist = points["RWrist"]
+
+            angle = calculateAngle(RShoulder, RElbow, RWrist)
+
+            if angle < 95: 
+                is_down = True
+            elif angle > 160 and angle < 190 and is_down:
+                repetitions += 1
+                is_down = False 
+
+    return {
+        "is_Valid": repetitions >= 7,
+        "message": f"Haz hecho {repetitions} repeticiones correctamente."
+    }
+
+def validatePullUps(bodyPoints):
+    repetitions = 0
+    correctRepetitions = 0
+    movement_phase = "initial"
+    highest = 0
+    lowest = 0
+    tolerance = 20
+    downPositionValid = False
+    upPositionValid = False
+
+    for points in bodyPoints:
+        currentPosition = points['Nose'][1]
+
+        RElbow = points["RElbow"]
+        LElbow = points["LElbow"]
         RShoulder = points["RShoulder"]
+        LShoulder = points["LShoulder"]
         RHip = points["RHip"]
-        RAnkle = points["RAnkle"]
-        LShoulder = points["LShoulder"]
         LHip = points["LHip"]
-        LAnkle = points["LAnkle"]
 
-        angleRight = calculateAngle(RShoulder, RHip, RAnkle)
-        angleLeft = calculateAngle(LShoulder, LHip, LAnkle)
+        rAngle = calculateAngle(RElbow, RShoulder, RHip)
+        lAngle = calculateAngle(LHip, LShoulder, LElbow)
+
+        if movement_phase == "initial":
+            highest = currentPosition - tolerance
+            lowest = currentPosition
+            movement_phase = "up"
         
-        anglesRight.append(angleRight)
-        anglesLeft.append(angleLeft)
-
-    plot_regression(anglesRight, 'regression_plot_right.png')
-    plot_regression(anglesLeft, 'regression_plot_left.png')
-
-    sumRight = sum(anglesRight) 
-    sumLeft = sum(anglesLeft)
-
-    averageRight = sumRight / len(anglesRight)
-    averageLeft = sumLeft / len(anglesLeft)
-
-    print("Average Right: ", averageRight)
-    print("Average Left: ", averageLeft)
-
-    if ((averageRight > 160 and averageRight < 180 ) or (averageLeft > 160  and averageLeft < 180)):
-        return True
+        if currentPosition < highest and movement_phase == "initial":
+            movement_phase = "down"
         
-    return False
+        if currentPosition < lowest:
+            lowest = currentPosition 
+        
+        if currentPosition > lowest + tolerance and movement_phase == "down":
+            movement_phase = "up"
+            highest = currentPosition
+            repetitions += 1
+            
+            if rAngle > 141 and rAngle < 157 and lAngle > 140 and lAngle < 157:
+                downPositionValid = True
 
+            if downPositionValid and upPositionValid:
+                correctRepetitions += 1
+                downPositionValid = False
+                upPositionValid = False
+        
+        if currentPosition > highest:
+            highest = currentPosition
 
-def calculateAnglesPullUps(bodyPoints):
-    anglesRight = []
-    anglesLeft = []
+        if currentPosition < highest - tolerance and movement_phase == "up":
+            movement_phase = "down"
+            lowest = currentPosition
+
+            if rAngle > 30 and rAngle < 50 and lAngle > 30 and lAngle < 50:
+                upPositionValid = True
+
+    return {
+        "is_Valid": correctRepetitions / repetitions >= 0.7,
+        "message": f"Haz hecho {correctRepetitions} repeticiones correctamente."
+    }
+    
+def validateShoulderPress(bodyPoints):
+    repetitions = 0
+    is_down = False
+
     for points in bodyPoints:
-        RShoulder = points["RShoulder"]
-        RElbow = points["RElbow"]
-        RWrist = points["RWrist"]
+        if all(k in points for k in ["RShoulder", "RElbow", "RWrist"]):
+            RShoulder = points["RShoulder"]
+            RElbow = points["RElbow"]
+            RWrist = points["RWrist"]
+
+            angle = calculateAngle(RShoulder, RElbow, RWrist)
+
+            if angle < 95: 
+                is_down = True
+            elif angle > 160 and angle < 190 and is_down:
+                repetitions += 1
+                is_down = False 
+
+    return {
+        "is_Valid": repetitions >= 7,
+        "message": f"Haz hecho {repetitions} repeticiones correctamente."
+    }
+
+def validateRowing(bodyPoints):
+    repetitions = 0
+    is_down = False
+
+    for points in bodyPoints:
         LShoulder = points["LShoulder"]
         LElbow = points["LElbow"]
         LWrist = points["LWrist"]
 
-        angleRight = calculateAngle(RShoulder, RElbow, RWrist)
-        angleLeft = calculateAngle(LShoulder, LElbow, LWrist)
+        angle = calculateAngle(LShoulder, LElbow, LWrist)
+        if angle < 95: 
+            is_down = True
+        elif angle > 160 and angle < 190 and is_down:
+            repetitions += 1
+            is_down = False
 
-        anglesRight.append(angleRight)
-        anglesLeft.append(angleLeft)
-
-
-    plot_regression(anglesRight, 'regression_plot_right.png')
-    plot_regression(anglesLeft, 'regression_plot_left.png')
-
-    sumRight = sum(anglesRight) 
-    sumLeft = sum(anglesLeft)
-
-    averageRight = sumRight / len(anglesRight)
-    averageLeft = sumLeft / len(anglesLeft)
-
-    print("Average Right: ", averageRight)
-    print("Average Left: ", averageLeft)
-
-    if ((averageRight > 90 and averageRight < 97 ) and (averageLeft > 90  and averageLeft < 97)):
-        return False
-        
-    return True
-
-def calculateAngleShoulderPress(bodyPoints):
-    angles = []
-    for points in bodyPoints:
-        RShoulder = points["RShoulder"]
-        RElbow = points["RElbow"]
-        RWrist = points["RWrist"]
-        LShoulder = points["LShoulder"]
-        LElbow = points["LElbow"]
-        LWrist = points["LWrist"]
-
-        angleRight = calculateAngle(RShoulder, RElbow, RWrist)
-        angleLeft = calculateAngle(LShoulder, LElbow, LWrist)
-
-        angles.append(angleRight)
-        angles.append(angleLeft)
-
-    plot_regression(angles, 'correcto.png')
-
-    sumAngles = sum(angles) 
-    average = sumAngles / len(angles)
-
-    print("Average: ", average)
-
-    if (average > 90 and average < 100):
-        return True
-        
-    return False
-
+    return {
+        "is_Valid": repetitions >= 7,
+        "message": f"Haz hecho {repetitions} repeticiones correctamente."
+    }

@@ -3,8 +3,6 @@ from datetime import datetime
 import cv2 as cv
 import mediapipe as mp
 
-
-
 def mediaPipeModel(video_path):
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
@@ -45,8 +43,9 @@ def mediaPipeModel(video_path):
                 LHip = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
                 LKnee = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
                 LAnkle = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ANKLE]
+                Nose = results.pose_landmarks.landmark[mp_pose.PoseLandmark.NOSE]
 
-                body_points.append({
+                points = {
                     "RWrist": [RWrist.x, RWrist.y],
                     "RElbow": [RElbow.x, RElbow.y],
                     "RShoulder": [RShoulder.x, RShoulder.y],
@@ -58,8 +57,9 @@ def mediaPipeModel(video_path):
                     "RAnkle": [RAnkle.x, RAnkle.y],
                     "LHip": [LHip.x, LHip.y],
                     "LKnee": [LKnee.x, LKnee.y],
-                    "LAnkle": [LAnkle.x, LAnkle.y]
-                })
+                    "LAnkle": [LAnkle.x, LAnkle.y],
+                    "Nose": [Nose.x, Nose.y]
+                }
 
                 mp_drawing.draw_landmarks(
                     frame,
@@ -69,7 +69,17 @@ def mediaPipeModel(video_path):
                     mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2),
                 )
 
+                for label, coord in points.items():
+                    x = int(coord[0] * frame.shape[1])
+                    y = int(coord[1] * frame.shape[0])
+
+                    points[label] = [x, frame.shape[0] - y ]
+
+                    # cv.putText(frame, label, (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
+                body_points.append(points)
+
             video_writer.write(frame)
+
             # cv.imshow('Pose Detection', frame)
 
             if cv.waitKey(10) & 0xFF == ord('q'):
@@ -205,14 +215,14 @@ def openPoseModel(video):
 
 if __name__ == '__main__':
     from utils import validatePoses
-    video = 'ts3_1_1.mp4'
+    video = '2.mp4'
 
     if (input("Model: ") == '0'):
         result = mediaPipeModel(video)
     else:
         result = openPoseModel(video)
     
-    isValid = validatePoses(result['body_points'], "ts3")
+    isValid = validatePoses(result['body_points'], "ts2")
 
     print({
             'message': 'File uploaded successfully',
