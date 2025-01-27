@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import cv2 as cv
 import mediapipe as mp
+from utils import calculateAngle
 
 def mediaPipeModel(video_path):
     mp_pose = mp.solutions.pose
@@ -215,17 +216,17 @@ def openPoseModel(video):
 
 if __name__ == '__main__':
     from utils import validatePoses
-    video = '2.mp4'
+    video = '7.mp4'
 
     if (input("Model: ") == '0'):
         result = mediaPipeModel(video)
     else:
         result = openPoseModel(video)
     
-    isValid = validatePoses(result['body_points'], "ts2")
+    isValid = validatePoses(result['body_points'], "ti3")
 
     print({
-            'message': 'File uploaded successfully',
             'newVideo': result['video'],
-            'isVideoValid': isValid,
+            'isVideoValid': isValid.get('is_Valid'),
+            'message': isValid.get('message')
         })
